@@ -20,12 +20,10 @@ input{width:100%;padding:14px;margin:16px 0;border:1px solid #ccc;border-radius:
 <div class="badge" id="badge">PACK</div>
 <h1 id="titulo">¡Gracias por tu compra!</h1>
 <p id="sub">¿Ya sos alumno del curso gratuito de Google Sheets?</p>
-
 <div id="botones">
 <button class="btn-si" onclick="soyAlumno()">SÍ, ya tengo acceso</button>
 <button class="btn-no" onclick="noSoyAlumno()">NO, todavía no tengo acceso</button>
 </div>
-
 <div id="formSi" style="display:none">
 <input type="email" id="email" placeholder="Tu email del curso gratuito (el mismo)">
 <button class="btn-si" onclick="activar()">Activar mis cursos ahora</button>
@@ -34,10 +32,11 @@ input{width:100%;padding:14px;margin:16px 0;border:1px solid #ccc;border-radius:
 </div>
 
 <script>
-const API_URL = "https://script.google.com/macros/s/AKfycbx3a8HNtkGuh2qpfnAnopeNFKgxm0Lv6_oUkwdve3iB3s5i4m6T8RkuJ3KM8_-CX-eGjA/exec"; // <-- EJ: https://script.google.com/macros/s/AKfycb.../exec
+const API_URL = "https://script.google.com/macros/s/AKfycbx3a8HNtkGuh2qpfnAnopeNFKgxm0Lv6_oUkwdve3iB3s5i4m6T8RkuJ3KM8_-CX-eGjA/exec";
 
 const params = new URLSearchParams(window.location.search);
-const pack = params.get("pack") || "1";
+const pack = params.get("pack") || localStorage.getItem("pending_pack") || "1";
+
 const nombres = {
   "1": "Pack 1 - Emprendedor Digital",
   "2": "Pack 2 - Clientes en Orden",
@@ -47,7 +46,7 @@ document.getElementById("titulo").innerText = "¡Gracias por comprar " + (nombre
 document.getElementById("badge").innerText = nombres[pack] || "PACK " + pack;
 
 function noSoyAlumno(){
-  // Mandalo al formulario gratuito pero recordando el pack
+  localStorage.setItem("pending_pack", pack);
   window.location.href = "https://hugo85ar.github.io/formulario-curso-sheets/?pack=" + pack;
 }
 function soyAlumno(){
@@ -57,42 +56,30 @@ function soyAlumno(){
 }
 async function activar(){
   const email = document.getElementById("email").value.trim();
-  if(!email) return alert("Ingresá tu email");
-  if(!email.includes("@")) return alert("Email no válido");
-
+  if(!email ||!email.includes("@")) return alert("Ingresá un email válido");
   document.getElementById("msg").style.color = "#333";
   document.getElementById("msg").innerText = "Activando tus cursos...";
-
   try {
     const res = await fetch(API_URL, {
-      method:"POST",
-      mode: "no-cors", // no usamos para leer respuesta, pero para evitar bloqueo
-      // Si no-cors no te deja leer, sacá esta línea y usá modo cors
-      body: JSON.stringify({email: email, pack: pack})
-    });
-
-    // Como usamos no-cors no podemos leer JSON, así que hacemos un segundo fetch en modo cors
-    // Si tu API tiene permisos "Cualquier persona" va a funcionar:
-    const res2 = await fetch(API_URL, {
       method:"POST",
       headers: {"Content-Type": "text/plain"},
       body: JSON.stringify({email: email, pack: pack})
     });
-    const data = await res2.json();
-
+    const data = await res.json();
     if(data.status==="ok"){
+      localStorage.removeItem("pending_pack");
       document.getElementById("msg").style.color = "green";
       document.getElementById("msg").innerHTML = "✅ ¡Listo! Ya tenés activos los cursos del " + (nombres[pack] || "Pack "+pack) + ".<br><br><a href='https://hugo85ar.github.io/Plataforma-de-Cursos/'>Ir a la plataforma</a>";
     } else if(data.status==="not_found"){
       document.getElementById("msg").style.color = "red";
-      document.getElementById("msg").innerText = "❌ No encontramos ese email en la plataforma. Verificá si lo escribiste bien o inscribite al gratuito primero.";
+      document.getElementById("msg").innerText = "❌ No encontramos ese email. Verificá si lo escribiste bien o inscribite al gratuito primero.";
     } else {
       document.getElementById("msg").style.color = "red";
       document.getElementById("msg").innerText = "Error: " + data.message;
     }
   } catch(e){
     document.getElementById("msg").style.color = "green";
-    document.getElementById("msg").innerHTML = "✅ ¡Solicitud enviada! Si tu email existe, en 5 segundos ya vas a ver tus cursos activos.<br><br><a href='https://script.google.com/macros/s/AKfycby0d3lmpWy_JKb-JObmsi8yL71alS_EfELD_bm63irK2U-Mxm1V4u_KkvlkprNt96ZO/exec'>Ir a la plataforma</a>";
+    document.getElementById("msg").innerHTML = "✅ ¡Solicitud enviada! En 5 segundos revisá tu plataforma.<br><br><a href='https://hugo85ar.github.io/Plataforma-de-Cursos/'>Ir a la plataforma</a>";
   }
 }
 </script>
