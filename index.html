@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>¡Gracias por tu compra!</title>
+<style>
+body{font-family:Arial,sans-serif;background:#f4f6f9;margin:0;padding:20px;display:flex;justify-content:center}
+.card{background:#fff;max-width:520px;width:100%;padding:32px;border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,.1);text-align:center}
+h1{color:#1565c0;margin:0 0 10px} p{color:#555;line-height:1.5}
+button{width:100%;padding:16px;margin:10px 0;border:0;border-radius:10px;font-weight:bold;cursor:pointer;font-size:16px}
+.btn-si{background:#1565c0;color:#fff}.btn-no{background:#eeeeee;color:#333}
+input{width:100%;padding:14px;margin:16px 0;border:1px solid #ccc;border-radius:8px;box-sizing:border-box;font-size:16px}
+#msg{margin-top:15px;font-weight:bold}
+.badge{display:inline-block;background:#e3f2fd;color:#1565c0;padding:6px 12px;border-radius:20px;font-size:12px;font-weight:bold;margin-bottom:15px}
+</style>
+</head>
+<body>
+<div class="card">
+<div class="badge" id="badge">PACK</div>
+<h1 id="titulo">¡Gracias por tu compra!</h1>
+<p id="sub">¿Ya sos alumno del curso gratuito de Google Sheets?</p>
+
+<div id="botones">
+<button class="btn-si" onclick="soyAlumno()">SÍ, ya tengo acceso</button>
+<button class="btn-no" onclick="noSoyAlumno()">NO, todavía no tengo acceso</button>
+</div>
+
+<div id="formSi" style="display:none">
+<input type="email" id="email" placeholder="Tu email del curso gratuito (el mismo)">
+<button class="btn-si" onclick="activar()">Activar mis cursos ahora</button>
+<p id="msg"></p>
+</div>
+</div>
+
+<script>
+const API_URL = "https://script.google.com/macros/s/AKfycbx3a8HNtkGuh2qpfnAnopeNFKgxm0Lv6_oUkwdve3iB3s5i4m6T8RkuJ3KM8_-CX-eGjA/exec"; // <-- EJ: https://script.google.com/macros/s/AKfycb.../exec
+
+const params = new URLSearchParams(window.location.search);
+const pack = params.get("pack") || "1";
+const nombres = {
+  "1": "Pack 1 - Emprendedor Digital",
+  "2": "Pack 2 - Clientes en Orden",
+  "3": "Pack 3 - Transformación Total"
+};
+document.getElementById("titulo").innerText = "¡Gracias por comprar " + (nombres[pack] || "tu Pack") + "!";
+document.getElementById("badge").innerText = nombres[pack] || "PACK " + pack;
+
+function noSoyAlumno(){
+  // Mandalo al formulario gratuito pero recordando el pack
+  window.location.href = "https://hugo85ar.github.io/formulario-curso-sheets/?pack=" + pack;
+}
+function soyAlumno(){
+  document.getElementById("botones").style.display="none";
+  document.getElementById("sub").innerText = "Perfecto, ingresá el email con el que entraste al curso gratuito para activar tu pack.";
+  document.getElementById("formSi").style.display="block";
+}
+async function activar(){
+  const email = document.getElementById("email").value.trim();
+  if(!email) return alert("Ingresá tu email");
+  if(!email.includes("@")) return alert("Email no válido");
+
+  document.getElementById("msg").style.color = "#333";
+  document.getElementById("msg").innerText = "Activando tus cursos...";
+
+  try {
+    const res = await fetch(API_URL, {
+      method:"POST",
+      mode: "no-cors", // no usamos para leer respuesta, pero para evitar bloqueo
+      // Si no-cors no te deja leer, sacá esta línea y usá modo cors
+      body: JSON.stringify({email: email, pack: pack})
+    });
+
+    // Como usamos no-cors no podemos leer JSON, así que hacemos un segundo fetch en modo cors
+    // Si tu API tiene permisos "Cualquier persona" va a funcionar:
+    const res2 = await fetch(API_URL, {
+      method:"POST",
+      headers: {"Content-Type": "text/plain"},
+      body: JSON.stringify({email: email, pack: pack})
+    });
+    const data = await res2.json();
+
+    if(data.status==="ok"){
+      document.getElementById("msg").style.color = "green";
+      document.getElementById("msg").innerHTML = "✅ ¡Listo! Ya tenés activos los cursos del " + (nombres[pack] || "Pack "+pack) + ".<br><br><a href='https://script.google.com/macros/s/AKfycby0d3lmpWy_JKb-JObmsi8yL71alS_EfELD_bm63irK2U-Mxm1V4u_KkvlkprNt96ZO/exec' style='color:#1565c0'>Ir a la plataforma</a>";
+    } else if(data.status==="not_found"){
+      document.getElementById("msg").style.color = "red";
+      document.getElementById("msg").innerText = "❌ No encontramos ese email en la plataforma. Verificá si lo escribiste bien o inscribite al gratuito primero.";
+    } else {
+      document.getElementById("msg").style.color = "red";
+      document.getElementById("msg").innerText = "Error: " + data.message;
+    }
+  } catch(e){
+    document.getElementById("msg").style.color = "green";
+    document.getElementById("msg").innerHTML = "✅ ¡Solicitud enviada! Si tu email existe, en 5 segundos ya vas a ver tus cursos activos.<br><br><a href='https://script.google.com/macros/s/AKfycby0d3lmpWy_JKb-JObmsi8yL71alS_EfELD_bm63irK2U-Mxm1V4u_KkvlkprNt96ZO/exec'>Ir a la plataforma</a>";
+  }
+}
+</script>
+</body>
+</html>
